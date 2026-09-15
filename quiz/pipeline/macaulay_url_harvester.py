@@ -236,9 +236,16 @@ EBIRD_TAXONOMY_URL = (
     "https://api.ebird.org/v2/ref/taxonomy/ebird?fmt=csv&locale=en"
 )
 
-DEFAULT_TAXONOMY_CACHE = "ebird_taxonomy.csv"
-DEFAULT_EXCEL_EXPORT = "Bird Taxon Codes Reference (variants).xlsx"
-DEFAULT_RULES_EXPORT = "variant_rules_applied.csv"
+# Anchored to the repo, not to the working directory. Every one of these used
+# to be a bare relative name, so running the harvester from anywhere but the
+# repo root scattered the state file, the CSV and 180 MB of diagnostics into
+# whatever folder the shell happened to be sitting in - and a state file the
+# next run cannot find means the next run starts from scratch.
+ROOT = Path(__file__).resolve().parents[2]
+
+DEFAULT_TAXONOMY_CACHE = str(ROOT / "ebird_taxonomy.csv")
+DEFAULT_EXCEL_EXPORT = str(ROOT / "Bird Taxon Codes Reference (variants).xlsx")
+DEFAULT_RULES_EXPORT = str(ROOT / "variant_rules_applied.csv")
 
 
 # Region tiers, searched in order until the quota is filled.
@@ -262,9 +269,9 @@ DEFAULT_REFERENCE_FILE = (
 
 EBIRD_API_KEY = ""
 
-DEFAULT_STATE_FILE = "macaulay_url_state.json"
-DEFAULT_URL_EXPORT = "macaulay_image_urls.csv"
-DEFAULT_DIAGNOSTIC_DIRECTORY = "macaulay_diagnostics"
+DEFAULT_STATE_FILE = str(ROOT / "macaulay_url_state.json")
+DEFAULT_URL_EXPORT = str(ROOT / "macaulay_image_urls.csv")
+DEFAULT_DIAGNOSTIC_DIRECTORY = str(ROOT / "macaulay_diagnostics")
 
 EXPORT_EVERY = 25
 
@@ -2153,6 +2160,13 @@ class MacaulayUrlHarvester:
 
                 wanted, rule = self.variants_for(taxon)
 
+                # --only-variants rules most species out. Skipping here costs
+                # nothing; falling through would still pay the status line, the
+                # export bookkeeping and the courtesy delay for every one of a
+                # thousand birds that has no work to do.
+                if not wanted:
+                    continue
+
                 for variant in wanted:
 
                     key = self.state_key(taxon, variant)
@@ -2518,6 +2532,36 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    only_variants = {
+        part.strip()
+        for part in args.only_variants.split(",")
+        if part.strip()
+    } or None
+
+    if only_variants:
+        unknown = sorted(only_variants - set(VARIANT_FILTERS))
+        if unknown:
+            raise SystemExit(
+                f"--only-variants: no such variant: {', '.join(unknown)}\n"
+                f"Known variants: {', '.join(VARIANT_FILTERS)}"
+            )
+        # Which variants a species gets comes from the family rules, and those
+        # need the taxonomy. Without it every species falls back to
+        # DEFAULT_RULE, which asks for neither `flight` nor `immature` - so a
+        # filtered run would walk a thousand birds and fetch nothing at all,
+        # silently. Refuse instead.
+        from_rules = only_variants - set(DEFAULT_VARIANTS)
+        if from_rules and not Path(args.taxonomy).exists():
+            raise SystemExit(
+                f"--only-variants {', '.join(sorted(from_rules))} needs the "
+                "family rules, which need the eBird taxonomy.\n"
+                f"No taxonomy at {args.taxonomy} - pass --taxonomy or "
+                "--ebird-key.\n"
+                "Without it every species falls back to the permissive default "
+                "rule, which never asks for these, and the run would fetch "
+                "nothing."
+            )
+
     if args.images < 1:
         raise ValueError("--images must be at least 1.")
 
@@ -2559,11 +2603,7 @@ def main() -> None:
 
         all_variants=args.all_variants,
 
-        only_variants={
-            part.strip()
-            for part in args.only_variants.split(",")
-            if part.strip()
-        } or None,
+        only_variants=only_variants,
 
         region_tiers=[
             "" if part.strip().lower() in ("world", "global", "")
