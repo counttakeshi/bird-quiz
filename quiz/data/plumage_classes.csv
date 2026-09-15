@@ -4,6 +4,8 @@
 #
 #   sexes  male and female look different enough to matter
 #   ages   juvenile or immature looks different enough to matter
+#   flight you see this bird overhead rather than perched, so a flight
+#          photograph is the ordinary view and not a lucky one
 #
 # A raptor is the clearest case for keeping them apart: a juvenile Cooper's
 # Hawk is a genuinely different bird to identify, while male and female are
@@ -22,70 +24,72 @@
 # A third axis exists and is deliberately not modelled: breeding versus
 # nonbreeding plumage, which is the dominant one for shorebirds. Macaulay has
 # no season filter, so it would have to come from the observation month.
-scope,key,sexes,ages,note
-family,Anatidae,yes,yes,drakes unmistakable and eclipse plumage confuses everyone
-family,Trochilidae,yes,no,gorget is usually the whole identification
-family,Icteridae,yes,yes,orioles strongly; first-year birds much duller
-family,Cardinalidae,yes,no,buntings and grosbeaks: females a different bird entirely
-family,Parulidae,yes,yes,Setophaga mostly; first-fall plumages are the hard ones
-family,Fringillidae,yes,no,euphonias especially
-family,Thraupidae,yes,no,honeycreepers and seedeaters
-family,Trogonidae,yes,no,females brown-headed where males are green or black
-family,Phasianidae,yes,no,
-family,Odontophoridae,yes,no,wood-partridges and quail
-family,Ptiliogonatidae,yes,no,silky-flycatchers
-family,Tityridae,yes,no,becards: sexes look unrelated
-family,Pipridae,yes,no,manakins: females all look like the same green bird
-family,Cotingidae,yes,no,
-family,Anhingidae,yes,yes,female buff-necked
-family,Fregatidae,yes,yes,female white-breasted; juveniles white-headed
-family,Accipitridae,no,yes,ages are the whole problem; sexes differ in size not plumage
-family,Falconidae,no,yes,
-family,Pandionidae,no,yes,
-family,Cathartidae,no,yes,head colour changes with age
-family,Laridae,no,yes,two to four year cycles: the juveniles are the quiz
-family,Stercorariidae,no,yes,
-family,Ardeidae,no,yes,immature Little Blue and the night-herons
-family,Threskiornithidae,no,yes,
-family,Ciconiidae,no,yes,
-family,Sulidae,no,yes,boobies take years to reach adult plumage
-family,Pelecanidae,no,yes,
-family,Scolopacidae,no,yes,juveniles crisply patterned; see the note about season
-family,Charadriidae,no,yes,
-family,Psittacidae,no,no,
-family,Picidae,no,no,sexes differ only in a crown or malar patch
-family,Tyrannidae,no,no,the Empidonax are hard for other reasons entirely
-family,Vireonidae,no,no,
-family,Troglodytidae,no,no,
-family,Turdidae,no,no,
-family,Mimidae,no,no,
-family,Passerellidae,no,no,
-species,verfly,yes,yes,Vermilion Flycatcher: the one dimorphic tyrant flycatcher
-species,norhar2,yes,yes,Northern Harrier: grey ghost versus brown female
-species,amekes,yes,no,American Kestrel: the only strongly dimorphic falcon here
-species,snakit,yes,yes,Snail Kite
-species,hobkit,yes,yes,Hook-billed Kite: and the rufous morph on top of that
-species,rotbec,yes,no,Rose-throated Becard
-species,lovcot1,yes,no,Lovely Cotinga
-species,eletro,yes,no,Elegant Trogon
-species,paibun,yes,no,Painted Bunting
-species,lesgol,yes,no,Lesser Goldfinch
-species,blbgra1,yes,no,Blue-black Grassquit
-species,relhon1,yes,no,Red-legged Honeycreeper: female is a plain green bird
-species,grehon1,yes,no,Green Honeycreeper
-species,magfri,yes,yes,Magnificent Frigatebird
-species,kinvul1,no,yes,King Vulture: immature entirely dark
-species,woosto,no,yes,Wood Stork
-species,whiibi,no,yes,White Ibis: brown immature
-species,libher,no,yes,Little Blue Heron: white immature is the classic trap
-species,shshaw,no,yes,Sharp-shinned Hawk: juvenile versus Cooper's is the real question
-species,coohaw,no,yes,Cooper's Hawk
-species,bichaw1,no,yes,Bicolored Hawk
-species,ovenbi1,no,no,Ovenbird: sexes alike despite the family default
-species,louwat,no,no,Louisiana Waterthrush: sexes alike
-species,norwat,no,no,Northern Waterthrush: sexes alike
-species,tenwar,no,no,Tennessee Warbler: sexes near enough alike
-species,orcwar,no,no,Orange-crowned Warbler: sexes alike
-species,naswar,no,no,Nashville Warbler: sexes alike
-species,melbla1,no,no,Melodious Blackbird: sexes alike despite the family default
-species,grtgra,yes,yes,Great-tailed Grackle: female half the size and brown
+scope,key,sexes,ages,flight,note
+family,Anatidae,yes,yes,,drakes unmistakable and eclipse plumage confuses everyone
+family,Trochilidae,yes,no,,gorget is usually the whole identification
+family,Icteridae,yes,yes,,orioles strongly; first-year birds much duller
+family,Cardinalidae,yes,no,,buntings and grosbeaks: females a different bird entirely
+family,Parulidae,yes,yes,,Setophaga mostly; first-fall plumages are the hard ones
+family,Fringillidae,yes,no,,euphonias especially
+family,Thraupidae,yes,no,,honeycreepers and seedeaters
+family,Trogonidae,yes,no,,females brown-headed where males are green or black
+family,Phasianidae,yes,no,,
+family,Odontophoridae,yes,no,,wood-partridges and quail
+family,Ptiliogonatidae,yes,no,,silky-flycatchers
+family,Tityridae,yes,no,,becards: sexes look unrelated
+family,Pipridae,yes,no,,manakins: females all look like the same green bird
+family,Cotingidae,yes,no,,
+family,Anhingidae,yes,yes,,female buff-necked
+family,Fregatidae,yes,yes,,female white-breasted; juveniles white-headed
+family,Accipitridae,no,yes,yes,ages are the whole problem; sexes differ in size not plumage
+family,Falconidae,no,yes,yes,
+family,Pandionidae,no,yes,yes,
+family,Cathartidae,no,yes,yes,head colour changes with age
+family,Laridae,no,yes,,two to four year cycles: the juveniles are the quiz
+family,Stercorariidae,no,yes,,
+family,Ardeidae,no,yes,,immature Little Blue and the night-herons
+family,Threskiornithidae,no,yes,,
+family,Ciconiidae,no,yes,,
+family,Sulidae,no,yes,,boobies take years to reach adult plumage
+family,Pelecanidae,no,yes,,
+family,Scolopacidae,no,yes,,juveniles crisply patterned; see the note about season
+family,Charadriidae,no,yes,,
+family,Psittacidae,no,no,,
+family,Picidae,no,no,,sexes differ only in a crown or malar patch
+family,Tyrannidae,no,no,,the Empidonax are hard for other reasons entirely
+family,Vireonidae,no,no,,
+family,Troglodytidae,no,no,,
+family,Turdidae,no,no,,
+family,Mimidae,no,no,,
+family,Passerellidae,no,no,,
+species,verfly,yes,yes,,Vermilion Flycatcher: the one dimorphic tyrant flycatcher
+species,norhar2,yes,yes,,Northern Harrier: grey ghost versus brown female
+species,amekes,yes,no,,American Kestrel: the only strongly dimorphic falcon here
+species,snakit,yes,yes,,Snail Kite
+species,hobkit,yes,yes,,Hook-billed Kite: and the rufous morph on top of that
+species,rotbec,yes,no,,Rose-throated Becard
+species,lovcot1,yes,no,,Lovely Cotinga
+species,eletro,yes,no,,Elegant Trogon
+species,paibun,yes,no,,Painted Bunting
+species,lesgol,yes,no,,Lesser Goldfinch
+species,blbgra1,yes,no,,Blue-black Grassquit
+species,relhon1,yes,no,,Red-legged Honeycreeper: female is a plain green bird
+species,grehon1,yes,no,,Green Honeycreeper
+species,magfri,yes,yes,,Magnificent Frigatebird
+species,kinvul1,no,yes,,King Vulture: immature entirely dark
+species,woosto,no,yes,,Wood Stork
+species,whiibi,no,yes,,White Ibis: brown immature
+species,libher,no,yes,,Little Blue Heron: white immature is the classic trap
+species,shshaw,no,yes,,Sharp-shinned Hawk: juvenile versus Cooper's is the real question
+species,coohaw,no,yes,,Cooper's Hawk
+species,bichaw1,no,yes,,Bicolored Hawk
+species,ovenbi1,no,no,,Ovenbird: sexes alike despite the family default
+species,louwat,no,no,,Louisiana Waterthrush: sexes alike
+species,norwat,no,no,,Northern Waterthrush: sexes alike
+species,tenwar,no,no,,Tennessee Warbler: sexes near enough alike
+species,orcwar,no,no,,Orange-crowned Warbler: sexes alike
+species,naswar,no,no,,Nashville Warbler: sexes alike
+species,melbla1,no,no,,Melodious Blackbird: sexes alike despite the family default
+species,grtgra,yes,yes,,Great-tailed Grackle: female half the size and brown
+family,Hirundinidae,no,no,yes,almost always overhead; a perched swallow is the unusual view
+family,Apodidae,no,no,yes,never perched in the field at all

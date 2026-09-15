@@ -12,21 +12,31 @@
  * Defined in this module rather than photos.ts because photos.ts imports from
  * here; putting it the other way round makes a cycle for no benefit.
  */
-export const VARIANTS = ['any', 'male', 'female', 'juvenile', 'immature', 'adult'] as const;
+export const VARIANTS = [
+	'any',
+	'male',
+	'female',
+	'juvenile',
+	'immature',
+	'adult',
+	'flight'
+] as const;
 export type PlumageVariant = (typeof VARIANTS)[number];
 
 /**
  * The order to offer them in, which is not the wire order.
  *
  * Age runs oldest to youngest so the pills read the way a birder thinks, and
- * `any` is left out because the setup screen shows it as "All".
+ * `any` is left out because the setup screen shows it as "All". `flight` is a
+ * behaviour rather than an age, so it sits after them rather than among them.
  */
 export const VARIANT_ORDER: readonly PlumageVariant[] = [
 	'male',
 	'female',
 	'adult',
 	'immature',
-	'juvenile'
+	'juvenile',
+	'flight'
 ];
 
 /**
@@ -59,6 +69,8 @@ const VARIANT_WORDS: Record<string, PlumageVariant> = {
 	imm: 'immature',
 	adult: 'adult',
 	ad: 'adult',
+	flight: 'flight',
+	flying: 'flight',
 	any: 'any'
 };
 

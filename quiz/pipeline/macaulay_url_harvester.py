@@ -63,6 +63,10 @@ VARIANT_FILTERS = {
     "adult": {"age": "adult"},
     "juvenile": {"age": "juvenile"},
     "immature": {"age": "immature"},
+    # Macaulay's "Flying" behaviour. Deliberately unfiltered for age and sex:
+    # a bird overhead is the one case where you usually cannot tell either, so
+    # narrowing it would throw away most of the useful photographs.
+    "flight": {"tag": "flying_flight"},
 }
 
 DEFAULT_VARIANTS = ["any", "male", "female", "juvenile"]
@@ -77,6 +81,11 @@ DEFAULT_VARIANTS = ["any", "male", "female", "juvenile"]
 #              entirely. "immature" suits groups that take years to
 #              mature and get tagged that way (raptors, gulls,
 #              herons). "juvenile" suits passerines.
+# "flight"  -> you see this bird overhead rather than perched, so a
+#              flight photograph is the ordinary view and not a lucky
+#              one. Independent of sex and age: the flight search is
+#              sent unfiltered, because a bird overhead is the case
+#              where you usually cannot tell either.
 #
 # Family is the default. Genus overrides it, for families that are
 # not internally consistent. Anything not listed falls back to
@@ -88,9 +97,9 @@ DEFAULT_RULE = {"female": True, "age": "juvenile"}
 FAMILY_RULES: dict[str, dict[str, Any]] = {
 
     # --- non-passerines, sexes alike, age matters -------------
-    "Accipitridae": {"female": False, "age": "immature"},
-    "Falconidae": {"female": False, "age": "immature"},
-    "Pandionidae": {"female": False, "age": "immature"},
+    "Accipitridae": {"female": False, "age": "immature", "flight": True},
+    "Falconidae": {"female": False, "age": "immature", "flight": True},
+    "Pandionidae": {"female": False, "age": "immature", "flight": True},
     "Laridae": {"female": False, "age": "immature"},
     "Ardeidae": {"female": False, "age": "immature"},
     "Threskiornithidae": {"female": False, "age": "immature"},
@@ -98,7 +107,7 @@ FAMILY_RULES: dict[str, dict[str, Any]] = {
     "Pelecanidae": {"female": False, "age": "immature"},
     "Sulidae": {"female": False, "age": "immature"},
     "Phalacrocoracidae": {"female": False, "age": "immature"},
-    "Cathartidae": {"female": False, "age": "immature"},
+    "Cathartidae": {"female": False, "age": "immature", "flight": True},
     "Scolopacidae": {"female": False, "age": "juvenile"},
     "Charadriidae": {"female": False, "age": "juvenile"},
     "Jacanidae": {"female": False, "age": "juvenile"},
@@ -124,7 +133,7 @@ FAMILY_RULES: dict[str, dict[str, Any]] = {
     "Strigidae": {"female": False, "age": None},
     "Tytonidae": {"female": False, "age": None},
     "Nyctibiidae": {"female": False, "age": None},
-    "Apodidae": {"female": False, "age": None},
+    "Apodidae": {"female": False, "age": None, "flight": True},
     "Momotidae": {"female": False, "age": None},
     "Bucconidae": {"female": False, "age": None},
     "Ramphastidae": {"female": False, "age": None},
@@ -156,7 +165,7 @@ FAMILY_RULES: dict[str, dict[str, Any]] = {
     "Rhinocryptidae": {"female": False, "age": None},
     "Vireonidae": {"female": False, "age": None},
     "Corvidae": {"female": False, "age": None},
-    "Hirundinidae": {"female": False, "age": None},
+    "Hirundinidae": {"female": False, "age": None, "flight": True},
     "Troglodytidae": {"female": False, "age": None},
     "Polioptilidae": {"female": False, "age": None},
     "Turdidae": {"female": False, "age": "juvenile"},
@@ -371,6 +380,7 @@ class MacaulayUrlHarvester:
         rules_export: str = DEFAULT_RULES_EXPORT,
         excel_export: str = DEFAULT_EXCEL_EXPORT,
         all_variants: bool = False,
+        only_variants: set[str] | None = None,
         headless: bool = False,
         load_images: bool = False,
         force_dom: bool = False,
@@ -402,6 +412,7 @@ class MacaulayUrlHarvester:
         self.rules_export = Path(rules_export)
         self.excel_export = Path(excel_export)
         self.all_variants = all_variants
+        self.only_variants = only_variants
 
         # Set when a species actually fetched something, cleared when the CSV
         # and Excel exports are written. A resumed run that fetches nothing
@@ -1101,6 +1112,15 @@ class MacaulayUrlHarvester:
             if not sexes_differ:
                 variants.append("adult")
             variants.append(age)
+
+        if rule.get("flight"):
+            variants.append("flight")
+
+        # A run that only wants the new tier should not re-walk the ones
+        # already in the state file. Filtering here rather than at the call
+        # site keeps every caller honest, including the URL exports.
+        if self.only_variants:
+            variants = [v for v in variants if v in self.only_variants]
 
         return variants, rule
 
@@ -2444,6 +2464,17 @@ def main() -> None:
     )
 
     parser.add_argument(
+        "--only-variants",
+        default="",
+        help=(
+            "Comma-separated variant names to run, skipping every "
+            "other tier. Use it to add a newly introduced tier "
+            "without re-walking the ones already harvested, e.g. "
+            "--only-variants flight."
+        ),
+    )
+
+    parser.add_argument(
         "--check-timeout",
         type=int,
         default=DEFAULT_CHECK_TIMEOUT,
@@ -2527,6 +2558,12 @@ def main() -> None:
         excel_export=args.excel_export,
 
         all_variants=args.all_variants,
+
+        only_variants={
+            part.strip()
+            for part in args.only_variants.split(",")
+            if part.strip()
+        } or None,
 
         region_tiers=[
             "" if part.strip().lower() in ("world", "global", "")

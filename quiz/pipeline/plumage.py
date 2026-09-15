@@ -1,4 +1,4 @@
-"""Which plumage variants each species needs.
+"""Which photo variants each species needs.
 
 Reads data/plumage_classes.csv - family defaults with species overrides.
 
@@ -24,21 +24,32 @@ CLASSES = common.DATA / "plumage_classes.csv"
 # src/lib/quiz/pins.ts. The order is the wire format's variant index, so
 # appending is safe and reordering is not - which is why `adult` sits at the
 # end rather than next to the other ages. The app has its own display order.
-VARIANTS = ["any", "male", "female", "juvenile", "immature", "adult"]
+VARIANTS = ["any", "male", "female", "juvenile", "immature", "adult", "flight"]
 
 
 class Plumage:
-    """Per-species sex and age flags, resolved from family defaults."""
+    """Per-species sex, age and flight flags, resolved from family defaults."""
 
     def __init__(self, families: dict, species: dict) -> None:
         self.families = families
         self.species = species
 
     def flags(self, code: str, family: str) -> dict[str, bool]:
-        """Species row wins; otherwise the family row; otherwise neither."""
-        if code in self.species:
-            return self.species[code]
-        return self.families.get(family, {"sexes": False, "ages": False})
+        """Family row, with any column the species row actually sets on top.
+
+        A species row overrides column by column rather than wholesale, so a
+        blank cell inherits. Writing `yes` or `no` still overrides, which is
+        what every row written before the flight column did - and why that
+        column had to inherit rather than default to no. Eight raptors carried
+        an override for their ages and would otherwise have quietly lost the
+        flight search their family asks for, among them Northern Harrier and
+        Cooper's Hawk.
+        """
+        out = dict(self.families.get(family, {}))
+        for key, value in self.species.get(code, {}).items():
+            if value is not None:
+                out[key] = value
+        return {k: bool(out.get(k)) for k in ("sexes", "ages", "flight")}
 
     def variants_for(self, code: str, family: str) -> list[str]:
         """The variants worth harvesting for this species.
@@ -48,6 +59,10 @@ class Plumage:
         a raptor it holds plenty of untagged juveniles. The filtered variants
         are additions to it, never replacements, because age and sex tagging
         is optional on upload and sparse for most species.
+
+        `flight` is orthogonal to both: it asks Macaulay for the "Flying"
+        behaviour with no age or sex filter, because a bird overhead is the one
+        case where you usually cannot tell either.
 
         Where ages differ, `adult` is collected too - but only if the sexes
         look alike. Macaulay's male and female searches are both sent with
@@ -64,6 +79,8 @@ class Plumage:
             if not flags["sexes"]:
                 out.append("adult")
             out += ["juvenile", "immature"]
+        if flags["flight"]:
+            out.append("flight")
         return out
 
 
@@ -72,8 +89,8 @@ def load() -> Plumage:
         print(f"  (no {CLASSES.name}; no species will get variants)")
         return Plumage({}, {})
 
-    families: dict[str, dict[str, bool]] = {}
-    species: dict[str, dict[str, bool]] = {}
+    families: dict[str, dict[str, bool | None]] = {}
+    species: dict[str, dict[str, bool | None]] = {}
 
     with CLASSES.open(encoding="utf-8", newline="") as fh:
         # The file carries a long comment header, which csv has no concept of.
@@ -83,9 +100,16 @@ def load() -> Plumage:
             key = (row.get("key") or "").strip()
             if not scope or not key:
                 continue
+            # None, not False, for a blank cell: a species row has to be able
+            # to say nothing about a column and inherit the family's answer.
+            def flag(name: str) -> bool | None:
+                raw = (row.get(name) or "").strip().lower()
+                return None if raw == "" else raw == "yes"
+
             flags = {
-                "sexes": (row.get("sexes") or "").strip().lower() == "yes",
-                "ages": (row.get("ages") or "").strip().lower() == "yes",
+                "sexes": flag("sexes"),
+                "ages": flag("ages"),
+                "flight": flag("flight"),
             }
             if scope == "family":
                 families[key] = flags
