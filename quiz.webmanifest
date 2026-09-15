@@ -1,0 +1,30 @@
+{
+	"id": "/bird-quiz/quiz",
+	"name": "Cardellina Bird ID Quiz",
+	"short_name": "Bird Quiz",
+	"description": "Practise the confusion species of Chiapas, head to head.",
+	"start_url": "/bird-quiz/quiz",
+	"scope": "/bird-quiz/quiz",
+	"display": "standalone",
+	"orientation": "portrait",
+	"background_color": "#f8f7f3",
+	"theme_color": "#2f4a3c",
+	"icons": [
+		{
+			"src": "/bird-quiz/quiz-icon-192.png",
+			"sizes": "192x192",
+			"type": "image/png"
+		},
+		{
+			"src": "/bird-quiz/quiz-icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png"
+		},
+		{
+			"src": "/bird-quiz/quiz-icon-maskable-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "maskable"
+		}
+	]
+}
