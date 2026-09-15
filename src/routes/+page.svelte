@@ -178,7 +178,7 @@
 	{#if screen === 'setup'}
 		<header class="intro">
 			<h1>Bird ID quiz</h1>
-			<p>Pick two or more birds. The quiz shows one and asks which it is.</p>
+			<p>Pick two or more birds.</p>
 			{#if dev}
 				<p class="links"><a href="{base}/edit">Edit the notes and photographs</a></p>
 			{/if}
