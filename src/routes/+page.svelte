@@ -17,14 +17,8 @@
 	<h1>Bird ID quiz</h1>
 
 	<nav>
-		<a href="{base}/photo">
-			<span class="name">Photo quiz</span>
-			<span class="note">Which bird is this?</span>
-		</a>
-		<a href="{base}/audio">
-			<span class="name">Audio quiz</span>
-			<span class="note">Which bird is singing?</span>
-		</a>
+		<a href="{base}/photo">Photo quiz</a>
+		<a href="{base}/audio">Audio quiz</a>
 	</nav>
 
 	{#if dev}
@@ -54,32 +48,20 @@
 		}
 	}
 
-	a {
+	nav a {
 		display: block;
-		padding: 1.25rem 1.25rem 1.1rem;
+		padding: 1.25rem;
 		background: var(--white);
 		border: 1px solid var(--rule);
 		border-radius: 0.35rem;
 		text-decoration: none;
-		color: inherit;
-	}
-
-	a:hover {
-		border-color: var(--canopy);
-	}
-
-	.name {
-		display: block;
 		font-family: var(--display);
 		font-size: 1.3rem;
 		color: var(--canopy);
 	}
 
-	.note {
-		display: block;
-		margin-top: 0.15rem;
-		font-size: 0.9rem;
-		color: var(--stone);
+	nav a:hover {
+		border-color: var(--canopy);
 	}
 
 	.links {
