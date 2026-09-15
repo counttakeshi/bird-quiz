@@ -167,13 +167,10 @@
 		<header class="intro">
 			<h1>Photo quiz</h1>
 			<p>Pick two or more birds.</p>
-			{#if dev}
-				<p class="links"><a href="{base}/edit">Edit the notes and photographs</a></p>
-			{/if}
 		</header>
 
 		<div class="picker">
-			<label for="species-search">Search by English, scientific or Spanish name</label>
+			<label for="species-search">Search</label>
 			<div class="combo">
 				<input
 					id="species-search"
@@ -276,7 +273,6 @@
 		</button>
 	{:else if question}
 		<div class="hud">
-			<span class="tier">{picks.length} species</span>
 			<button type="button" class="quit" onclick={() => (screen = 'setup')}>Change</button>
 		</div>
 
@@ -377,14 +373,6 @@
 	.intro p,
 
 	/* ── picker ───────────────────────────────────────────────────────────── */
-
-	.links {
-		margin-top: 0.9rem;
-		font-size: 0.9rem;
-	}
-	.links a {
-		color: var(--canopy);
-	}
 
 	.note {
 		margin-top: 0.9rem;
@@ -630,10 +618,6 @@
 		gap: 1rem;
 		font-size: 0.85rem;
 		color: var(--stone);
-	}
-	.hud .tier {
-		font-weight: 700;
-		color: var(--canopy);
 	}
 	.quit {
 		background: none;

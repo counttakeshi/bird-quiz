@@ -160,7 +160,7 @@
 		</header>
 
 		<div class="picker">
-			<label for="species-search">Search by English, scientific or Spanish name</label>
+			<label for="species-search">Search</label>
 			<div class="combo">
 				<input
 					id="species-search"
@@ -251,7 +251,7 @@
 		</div>
 	{:else if question}
 		<div class="hud">
-			<button type="button" class="back" onclick={() => (screen = 'setup')}>← Change birds</button>
+			<button type="button" class="quit" onclick={() => (screen = 'setup')}>Change</button>
 		</div>
 
 		{#if recording}
@@ -507,7 +507,7 @@
 	.hud {
 		margin-bottom: 1rem;
 	}
-	.back {
+	.quit {
 		background: none;
 		border: none;
 		font: inherit;
