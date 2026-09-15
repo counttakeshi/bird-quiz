@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+
+# Build output
+/build
+/.svelte-kit
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / IDE
+.idea
+*.swp
+.vscode
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Tooling caches
+*.tsbuildinfo

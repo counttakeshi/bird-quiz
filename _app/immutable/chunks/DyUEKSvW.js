@@ -1,1 +1,0 @@
-var e=`https://formspree.io/f/xvkogdon`,t=`info@cardellina.com`,n=`https://ebird.org/targets?r1=MX-CHP&r2=world&t2=life&bmo=1&emo=12&print=true`,r=`x2y20srabx`;export{n as i,t as n,e as r,r as t};
