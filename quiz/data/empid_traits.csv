@@ -1,0 +1,37 @@
+# Structural field marks for the Empidonax and Contopus flycatchers.
+#
+# build_pair_notes.py turns this into a note for every pair, listing what
+# differs. Correct a row and every comparison that species appears in updates.
+#
+# Vocabulary:
+#   crown         round | peaked | flat | crested
+#   forehead      shallow | intermediate | steep
+#   bill          small | medium | long
+#   mandible      dark | partial | orange
+#   tail_length   short | medium | long
+#   tail_width    narrow | medium | wide
+#   projection    short | medium | long
+#   wingbar       weak | medium | strong
+#   wingpanel     weak | medium | strong
+#   contrast      weak | medium | strong        (upperparts vs underparts)
+#   eyering       indistinct | messy | crisp | teardrop
+#   colour        gray | olive | greenish-yellow | orangish
+#   habit         free text: wing and tail movement
+#   voice         free text: song, then call
+code,name,crown,forehead,bill,mandible,tail_length,tail_width,projection,wingbar,wingpanel,contrast,eyering,colour,habit,voice
+tuffly,Tufted Flycatcher,crested,intermediate,medium,orange,long,narrow,medium,strong,weak,weak,indistinct,orangish,flicks wings and tail in a shiver just after landing,song a rapid run of pip notes or chuwee-chuwee; call pip
+olsfly,Olive-sided Flycatcher,crested,shallow,long,orange,short,wide,long,weak,weak,strong,indistinct,gray,perches motionless and erect on tall dead snags; rarely flicks,song quick-three-beers; call a hollow pip often in threes
+grepew,Greater Pewee,crested,shallow,long,orange,long,narrow,long,weak,weak,weak,indistinct,gray,very rarely flicks wings or tail,song Jose-Maria; call pip or peeeur
+wewpew,Western Wood-Pewee,crested,shallow,long,dark,medium,wide,long,weak,weak,weak,indistinct,gray,rarely flicks; sallies high and returns to the same snag,song a burry descending BREeeer; call a flat pee
+eawpew,Eastern Wood-Pewee,crested,shallow,long,orange,long,wide,long,medium,weak,medium,indistinct,gray,rarely flicks; sallies high and returns to the same snag,song a slurred PEE-a-weeeEEE rising at the end; call pip
+acafly,Acadian Flycatcher,peaked,shallow,long,orange,medium,wide,long,strong,strong,strong,crisp,greenish-yellow,sedate; flicks less than other empids,song an explosive pwit-sip; call a squeaky pweek
+wilfly,Willow Flycatcher,peaked,shallow,medium,orange,medium,medium,medium,weak,weak,medium,indistinct,gray,flicks wings and tail infrequently,song a sneezing FITZ-brrrew; call a liquid whit
+aldfly,Alder Flycatcher,round,intermediate,medium,orange,medium,medium,medium,medium,strong,strong,indistinct,gray,flicks wings and tail infrequently,song free-BREER-o; call a flat pip - never a whit
+yebfly,Yellow-bellied Flycatcher,round,intermediate,medium,orange,short,narrow,medium,strong,strong,weak,crisp,greenish-yellow,flicks wings and tail often; shy and keeps to shade,song che-bunk; call a sharp pip
+wesfly,Western Flycatcher,crested,intermediate,medium,orange,medium,narrow,medium,medium,weak,weak,teardrop,greenish-yellow,flicks wings and tail habitually,song PE-u-WEEET or chew-wit; call a thin tseet
+hamfly,Hammond's Flycatcher,round,steep,small,dark,short,narrow,long,medium,medium,weak,messy,gray,flicks wings and tail often,song PIT-tic given in quick succession; call a flat pip - never a whit
+dusfly,Dusky Flycatcher,round,intermediate,medium,partial,long,narrow,medium,medium,weak,weak,messy,gray,pumps its tail continuously; up and down at the same speed,song PIT-tic or bean-dip given slowly; call a soft liquid whit
+pinfly1,Pine Flycatcher,peaked,steep,medium,orange,long,narrow,long,medium,weak,weak,teardrop,gray,tail often distinctly forked,song pip puweee; calls pip and whit and a thin tseet
+gryfly,Gray Flycatcher,flat,shallow,long,orange,long,narrow,medium,weak,weak,weak,messy,gray,drops its tail slowly after raising it - the only empid that does,song che-bec; call a short abrupt whit
+leafly,Least Flycatcher,round,intermediate,small,orange,short,narrow,short,strong,strong,strong,messy,gray,flicks wings and tail habitually,song a hard che-bek in rapid succession; call a sharp husky whit
+bubfly,Buff-breasted Flycatcher,round,intermediate,small,orange,medium,narrow,medium,strong,medium,medium,messy,orangish,flicks wings and tail occasionally; perches mid-canopy,song pirrip pirrip pu-reee; call a hard pit

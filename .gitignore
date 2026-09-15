@@ -25,3 +25,7 @@ vite.config.ts.timestamp-*
 
 # Tooling caches
 *.tsbuildinfo
+
+# Quiz pipeline: large downloads and API responses, all regenerable.
+quiz/data/raw/
+quiz/pipeline/__pycache__/
