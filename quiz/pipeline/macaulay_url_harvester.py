@@ -1053,7 +1053,16 @@ class MacaulayUrlHarvester:
 
     def rule_for(self, taxon: str) -> dict[str, Any]:
         """
-        Genus beats family beats the permissive default.
+        Family, with whatever the genus actually says layered on top.
+
+        A genus row overrides key by key rather than wholesale, so a genus that
+        says nothing about a key inherits the family's answer. It used to
+        replace the family row entirely, which meant every key added to a
+        family afterwards was silently lost for any genus that had a row - and
+        `flight` was added to Accipitridae and Falconidae afterwards. Ten birds
+        lost their flight search that way: every Falco, both Micrastur, the
+        Laughing Falcon and Northern Harrier, which between them are most of
+        the raptors you only ever see overhead.
         """
 
         info = self.taxonomy.get(taxon)
@@ -1065,7 +1074,8 @@ class MacaulayUrlHarvester:
         family = info.get("family", "")
 
         if genus in self.genus_rules:
-            return dict(self.genus_rules[genus]) | {
+            base = dict(self.family_rules.get(family) or DEFAULT_RULE)
+            return base | dict(self.genus_rules[genus]) | {
                 "basis": f"genus {genus}"
             }
 
