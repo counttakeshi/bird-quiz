@@ -22,7 +22,17 @@
 
 import photoData from '$lib/data/quiz/photos.json';
 import pinData from '$lib/data/quiz/photo_pins.json';
-import { VARIANTS, VARIANT_ORDER, type PinMap, type PlumageVariant } from './pins';
+import { TAGS, FLIGHT_BIT, VARIANT_ORDER, type PinMap, type PlumageVariant } from './pins';
+
+/** The plumage tags set in a packed record, in TAGS order. */
+function plumagesIn(meta: number): PlumageVariant[] {
+	const out: PlumageVariant[] = [];
+	for (let i = 0; i < TAGS.length; i++) {
+		const tag = TAGS[i];
+		if (tag !== 'flight' && (meta >> (7 + i)) & 1) out.push(tag as PlumageVariant);
+	}
+	return out;
+}
 
 export type { PlumageVariant };
 
@@ -41,10 +51,15 @@ const INAT_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'JPG'];
 /**
  * Macaulay: `[assetId, meta, credit]`.
  *
- * `meta` packs three small facts into one integer:
+ * `meta` packs the small facts into one integer:
  *   bit 0      Mexican checklist
  *   bits 1-6   star rating in tenths (25-50; nothing below 2.5 is kept)
- *   bits 7+    plumage variant, indexed into VARIANTS
+ *   bits 7+    one bit per tag, in TAGS order
+ *
+ * Bits rather than an index because the tags are not alternatives. A
+ * photograph returned by both the immature search and the flight search is an
+ * immature bird in flight, and asking for a juvenile overhead has to mean both
+ * at once. No bits set means nothing is known about what it shows.
  */
 type PackedMl = [number, number, number];
 
@@ -82,12 +97,21 @@ export interface Photo {
 	/** True when the record came from Mexico. */
 	mexican: boolean;
 	/**
-	 * Which plumage this photograph shows, where the harvest knew.
+	 * The bird is airborne.
+	 *
+	 * Independent of `variant`: for a swift or a kite this is the ordinary view
+	 * of the bird, and it can be true of any plumage.
+	 */
+	flight: boolean;
+	/**
+	 * Which plumages this photograph shows, where the harvest knew. Usually
+	 * one, sometimes two - a bird can be tagged both female and juvenile -
+	 * and often none at all, since tagging is optional on upload.
 	 *
 	 * Deliberately not shown before you answer: "juvenile" narrows the field
 	 * enormously, and in the field nobody hands you that first.
 	 */
-	variant: PlumageVariant;
+	variants: PlumageVariant[];
 }
 
 const EMPTY = { c: [], s: {} };
@@ -126,7 +150,8 @@ function unpackMl(row: PackedMl, credits: string[]): Photo {
 		source: 'macaulay',
 		rating: ((meta >> 1) & 63) / 10,
 		mexican: (meta & 1) === 1,
-		variant: VARIANTS[meta >> 7] ?? 'any'
+		variants: plumagesIn(meta),
+		flight: ((meta >> FLIGHT_BIT) & 1) === 1
 	};
 }
 
@@ -141,8 +166,9 @@ function unpackInat(row: PackedInat, credits: string[]): Photo {
 		href: `https://www.inaturalist.org/observations/${observation}`,
 		source: 'inaturalist',
 		mexican: ((flags >> 4) & 1) === 1,
-		// The iNaturalist harvest never recorded sex or age.
-		variant: 'any'
+		// The iNaturalist harvest never recorded sex, age or behaviour.
+		variants: [],
+		flight: false
 	};
 }
 
@@ -164,7 +190,8 @@ export function photosFor(speciesCode: string): Photo[] {
 				mexican: false,
 				// A pasted line can say "Cooper's Hawk juvenile", and if it did we
 				// know more about this photograph than any harvest told us.
-				variant: pin.v ?? ('any' as const)
+				variants: pin.v ? [pin.v] : [],
+				flight: false
 			}))
 		: best?.length
 			? best.map((row) => unpackMl(row, ml.c))
@@ -199,10 +226,18 @@ export function photographedCodes(): Set<string> {
 	return new Set([...Object.keys(pins), ...Object.keys(ml.s), ...Object.keys(inat.s)]);
 }
 
+/** Does this species have any photograph of a bird in the air? */
+export function hasFlight(speciesCode: string): boolean {
+	return photosFor(speciesCode).some((photo) => photo.flight);
+}
+
 /** Which variants exist for a species, for the setup screen and the filter. */
 export function variantsFor(speciesCode: string): PlumageVariant[] {
 	const seen = new Set<PlumageVariant>();
-	for (const photo of photosFor(speciesCode)) seen.add(photo.variant);
+	for (const photo of photosFor(speciesCode)) {
+		if (!photo.variants.length) seen.add('any');
+		for (const v of photo.variants) seen.add(v);
+	}
 	// A sexed bird is an adult, so offer the adult pill even where nothing is
 	// tagged `adult` outright - see satisfiesVariant.
 	if (seen.has('male') || seen.has('female')) seen.add('adult');

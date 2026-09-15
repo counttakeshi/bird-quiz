@@ -24,7 +24,19 @@ CLASSES = common.DATA / "plumage_classes.csv"
 # src/lib/quiz/pins.ts. The order is the wire format's variant index, so
 # appending is safe and reordering is not - which is why `adult` sits at the
 # end rather than next to the other ages. The app has its own display order.
-VARIANTS = ["any", "male", "female", "juvenile", "immature", "adult", "flight"]
+VARIANTS = ["any", "male", "female", "juvenile", "immature", "adult"]
+
+# Not a plumage, so not in VARIANTS: a bird can be both juvenile and in flight,
+# and for a raptor that combination is the whole point.
+FLIGHT = "flight"
+
+# What a photograph can be tagged with, one bit each, starting at bit 7 of the
+# packed record. A bit rather than an index because these are not alternatives:
+# an asset returned by both the immature search and the flight search is an
+# immature bird in flight, and the old format could only record one of the two.
+# Append only - the position is the wire format.
+TAGS = ["male", "female", "juvenile", "immature", "adult", FLIGHT]
+TAG_BIT = {name: 7 + i for i, name in enumerate(TAGS)}
 
 
 class Plumage:
@@ -80,7 +92,7 @@ class Plumage:
                 out.append("adult")
             out += ["juvenile", "immature"]
         if flags["flight"]:
-            out.append("flight")
+            out.append(FLIGHT)
         return out
 
 
@@ -144,9 +156,13 @@ def bank() -> dict[str, dict[str, int]]:
     for code, packed in (data.get("ml") or {}).get("s", {}).items():
         counts: dict[str, int] = {}
         for row in packed:
-            index = row[1] >> 7
-            name = VARIANTS[index] if index < len(VARIANTS) else "any"
-            counts[name] = counts.get(name, 0) + 1
+            hit = False
+            for name, bit in TAG_BIT.items():
+                if (row[1] >> bit) & 1:
+                    counts[name] = counts.get(name, 0) + 1
+                    hit = True
+            if not hit:
+                counts["any"] = counts.get("any", 0) + 1
         out[code] = counts
     for code, packed in (data.get("inat") or {}).get("s", {}).items():
         out.setdefault(code, {})["any"] = out.get(code, {}).get("any", 0) + len(packed)
@@ -162,7 +178,7 @@ def report_bank(plumage: Plumage, rows: dict[str, dict], family: str | None) -> 
     print(f"{len(held)} species in the bank")
     print()
     print(f"{'variant':<12}{'photos':>9}{'species':>10}")
-    for variant in VARIANTS:
+    for variant in ["any"] + TAGS:
         total = sum(c.get(variant, 0) for c in held.values())
         count = sum(1 for c in held.values() if c.get(variant))
         print(f"{variant:<12}{total:>9,}{count:>10,}")

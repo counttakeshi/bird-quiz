@@ -5,7 +5,7 @@
  * in play; the quiz shows a photograph of one of them and asks which it is.
  */
 
-import { satisfiesVariant, type PlumageVariant } from './pins';
+import { type PlumageVariant } from './pins';
 
 export interface SpeciesEntry {
 	/** eBird species code, the primary key everywhere. */
@@ -34,9 +34,17 @@ export interface SpeciesEntry {
  * female Least — the comparison you actually want, rather than the one a
  * single global filter allows.
  */
-export interface Pick {
+export interface Pick<Tag extends string = PlumageVariant> {
 	code: string;
-	variants: PlumageVariant[];
+	variants: Tag[];
+	/**
+	 * Only photographs of the bird in the air.
+	 *
+	 * Combines with `variants` rather than replacing one: a juvenile hawk
+	 * overhead is both, and for a raptor that is the view worth drilling.
+	 * Meaningless to the audio quiz, which leaves it unset.
+	 */
+	flight?: boolean;
 }
 
 // ── search ──────────────────────────────────────────────────────────────────
@@ -141,14 +149,14 @@ export function suggestions(
 
 // ── questions ───────────────────────────────────────────────────────────────
 
-export interface Question {
-	/** The species whose photo is shown — the right answer. */
+export interface Question<Tag> {
+	/** The species whose photo or recording is shown — the right answer. */
 	target: string;
 	/** Answer buttons, already shuffled. */
 	options: string[];
-	/** Which plumage the photograph shows. */
-	variant: PlumageVariant;
-	/** Index into that species' photo list. */
+	/** What the chosen item is: a plumage and a posture, or a sound type. */
+	tag: Tag;
+	/** Index into that species' list of photographs or recordings. */
 	photo: number;
 }
 
@@ -164,29 +172,29 @@ function shuffle<T>(items: T[]): T[] {
 /**
  * Build one question from the chosen species.
  *
- * `photosOf` hands back the plumage of every photograph a species has, so the
- * engine can honour each species' variant filter without knowing anything
- * about where photographs come from.
+ * `tagsOf` hands back one tag per item a species has - what each photograph
+ * shows, or what each recording is - and `allows` says whether a pick will
+ * accept that tag. Both are supplied by the caller, so the engine never learns
+ * anything about photographs or sound: the two quizzes disagree about what a
+ * filter even means, and this is where that disagreement belongs.
  */
-export function makeQuestion(
-	picks: Pick[],
-	photosOf: (code: string) => PlumageVariant[],
+export function makeQuestion<Tag, P extends { code: string }>(
+	picks: P[],
+	tagsOf: (code: string) => Tag[],
+	allows: (pick: P, tag: Tag) => boolean,
 	avoid?: string
-): Question | null {
+): Question<Tag> | null {
 	if (picks.length < 2) return null;
 
-	// A species can only be the answer if it has a photograph matching its own
+	// A species can only be the answer if it has an item matching its own
 	// filter. It stays on the buttons either way.
 	const usable = picks
-		.map((pick) => {
-			const all = photosOf(pick.code).map((v, i) => ({ v, i }));
-			return {
-				code: pick.code,
-				allowed: pick.variants.length
-					? all.filter(({ v }) => pick.variants.some((w) => satisfiesVariant(v, w)))
-					: all
-			};
-		})
+		.map((pick) => ({
+			code: pick.code,
+			allowed: tagsOf(pick.code)
+				.map((v, i) => ({ v, i }))
+				.filter(({ v }) => allows(pick, v))
+		}))
 		.filter((p) => p.allowed.length);
 
 	if (!usable.length) return null;
@@ -198,7 +206,7 @@ export function makeQuestion(
 	return {
 		target: chosen.code,
 		options: shuffle(picks.map((p) => p.code)),
-		variant: shot.v,
+		tag: shot.v,
 		photo: shot.i
 	};
 }

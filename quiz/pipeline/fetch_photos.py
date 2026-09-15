@@ -340,15 +340,24 @@ def export_bank(cache: dict) -> tuple[int, int]:
             if who not in seen:
                 seen[who] = len(credits)
                 credits.append(who)
-            # meta packs three small facts into one integer, because the file
+            # meta packs four small facts into one integer, because the file
             # is otherwise mostly commas:
             #   bit 0      Mexican checklist
             #   bits 1-6   rating in tenths (25-50)
-            #   bits 7+    plumage variant, indexed into plumage.VARIANTS
+            #   bits 7+    one bit per tag, see plumage.TAG_BIT
+            #
+            # Bits rather than an index because the tags are not alternatives.
+            # A photograph returned by both the immature search and the flight
+            # search is an immature bird in flight, and asking for a juvenile
+            # overhead has to be able to mean both at once. No bits set means
+            # the unfiltered search found it and nothing is known.
             tenths = int(round(float(photo.get("r") or 0) * 10))
-            variant = photo.get("v") or "any"
-            index = plumage.VARIANTS.index(variant) if variant in plumage.VARIANTS else 0
-            meta = (1 if photo.get("mx") else 0) | (tenths << 1) | (index << 7)
+            tags = photo.get("t") or ([photo["v"]] if photo.get("v") else [])
+            meta = (1 if photo.get("mx") else 0) | (tenths << 1)
+            for tag in tags:
+                bit = plumage.TAG_BIT.get(tag)
+                if bit is not None:
+                    meta |= 1 << bit
             rows.append([photo["a"], meta, seen[who]])
         if rows:
             species[code] = rows

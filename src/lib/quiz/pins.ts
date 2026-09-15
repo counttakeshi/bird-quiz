@@ -12,31 +12,35 @@
  * Defined in this module rather than photos.ts because photos.ts imports from
  * here; putting it the other way round makes a cycle for no benefit.
  */
-export const VARIANTS = [
-	'any',
-	'male',
-	'female',
-	'juvenile',
-	'immature',
-	'adult',
-	'flight'
-] as const;
+export const VARIANTS = ['any', 'male', 'female', 'juvenile', 'immature', 'adult'] as const;
+
+/**
+ * What a photograph can be tagged with, one bit each, starting at bit 7 of the
+ * packed record. Must match TAGS in quiz/pipeline/plumage.py - the position is
+ * the wire format, so appending is safe and reordering is not.
+ *
+ * `flight` is in here but not in VARIANTS: it is a posture, not a plumage, and
+ * a bird can be both juvenile and airborne.
+ */
+export const TAGS = ['male', 'female', 'juvenile', 'immature', 'adult', 'flight'] as const;
+
+export const FLIGHT_BIT = 7 + TAGS.indexOf('flight');
 export type PlumageVariant = (typeof VARIANTS)[number];
 
 /**
  * The order to offer them in, which is not the wire order.
  *
  * Age runs oldest to youngest so the pills read the way a birder thinks, and
- * `any` is left out because the setup screen shows it as "All". `flight` is a
- * behaviour rather than an age, so it sits after them rather than among them.
+ * `any` is left out because the setup screen shows it as "All". Flight is not
+ * here: it is a behaviour, not a plumage, and filters alongside these rather
+ * than instead of one of them.
  */
 export const VARIANT_ORDER: readonly PlumageVariant[] = [
 	'male',
 	'female',
 	'adult',
 	'immature',
-	'juvenile',
-	'flight'
+	'juvenile'
 ];
 
 /**
@@ -69,8 +73,6 @@ const VARIANT_WORDS: Record<string, PlumageVariant> = {
 	imm: 'immature',
 	adult: 'adult',
 	ad: 'adult',
-	flight: 'flight',
-	flying: 'flight',
 	any: 'any'
 };
 

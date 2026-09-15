@@ -135,6 +135,13 @@ def main() -> int:
         return 1
 
     by_species: dict[str, list[dict]] = {}
+
+    # Which searches returned an asset is the only per-asset tagging Macaulay
+    # gives us - the CSV has no age or sex column - so the union across
+    # searches is the record. An asset in both the immature search and the
+    # flight search is an immature bird in flight, and keeping only one of
+    # those, as this once did, throws away the half worth drilling.
+    asset_tags: dict[tuple[str, int], set[str]] = {}
     total = skipped_rating = skipped_bad = 0
 
     # csv rather than pandas: the file is 33 MB and this only needs one pass.
@@ -156,9 +163,13 @@ def main() -> int:
                 continue
             # Older harvests have no variant column at all; those rows are
             # the unfiltered search, which is what "any" means.
-            variant = (row.get("variant") or "any").strip().lower()
-            if variant not in plumage.VARIANTS:
-                variant = "any"
+            found = (row.get("variant") or "any").strip().lower()
+            if found in plumage.TAG_BIT:
+                asset_tags.setdefault((code, int(asset)), set()).add(found)
+            # Flight is not a plumage. Its search is unfiltered for age and sex,
+            # so those rows belong in the unfiltered bank; the tag above is
+            # what carries the fact that the bird was airborne.
+            variant = found if found in plumage.VARIANTS else "any"
             photo = {
                 "a": int(asset),
                 "by": (row.get("photographer") or "").strip(),
@@ -166,8 +177,6 @@ def main() -> int:
                 "r": rating,
                 "mx": country_of(row.get("location") or "") == "MX",
             }
-            if variant != "any":
-                photo["v"] = variant
             by_species.setdefault((code, variant), []).append(photo)
 
     print(f"read {total:,} rows from {path.name}")
@@ -214,6 +223,11 @@ def main() -> int:
     deduped = 0
     for (code, variant), rows in list(by_species.items()):
         kept = [r for r in rows if best_variant[(code, r["a"])] == variant]
+        for row in kept:
+            found = asset_tags.get((code, row["a"]))
+            if found:
+                row["t"] = sorted(found)
+            row.pop("v", None)
         deduped += len(rows) - len(kept)
         if kept:
             by_species[(code, variant)] = kept

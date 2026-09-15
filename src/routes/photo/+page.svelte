@@ -8,10 +8,9 @@
 		type Pick,
 		type Question
 	} from '$lib/quiz/engine';
-	import { photosFor, hasPhotos, variantsFor } from '$lib/quiz/photos';
-	import { VARIANT_ORDER, type PlumageVariant } from '$lib/quiz/pins';
+	import { photosFor, hasPhotos, variantsFor, hasFlight } from '$lib/quiz/photos';
+	import { VARIANT_ORDER, satisfiesVariant, type PlumageVariant } from '$lib/quiz/pins';
 	import { loadNotes, noteFor, type NoteMap } from '$lib/quiz/notes';
-	import { asset } from '$lib/paths';
 	import { base } from '$app/paths';
 	import { dev } from '$app/environment';
 
@@ -39,7 +38,7 @@
 	const ready = $derived(picks.length >= 2);
 
 	function add(code: string) {
-		if (!chosen.includes(code)) picks = [...picks, { code, variants: [] }];
+		if (!chosen.includes(code)) picks = [...picks, { code, variants: [], flight: false }];
 		query = '';
 		highlighted = 0;
 		inputEl?.focus();
@@ -56,6 +55,20 @@
 			const on = p.variants.includes(variant);
 			return { ...p, variants: on ? p.variants.filter((v) => v !== variant) : [...p.variants, variant] };
 		});
+	}
+
+	/** Narrow to birds in the air. Combines with the plumage above, so you can
+	 *  ask for a juvenile in flight rather than one or the other. */
+	function toggleFlight(code: string) {
+		picks = picks.map((p) => (p.code === code ? { ...p, flight: !p.flight } : p));
+	}
+
+	/** A photograph satisfies a pick when the plumage matches and, if flight
+	 *  was asked for, the bird is airborne. */
+	function allows(pick: Pick, photo: Shows): boolean {
+		if (pick.flight && !photo.flight) return false;
+		if (!pick.variants.length) return true;
+		return pick.variants.some((w) => photo.variants.some((v) => satisfiesVariant(v, w)));
 	}
 
 	function onKeydown(event: KeyboardEvent) {
@@ -76,7 +89,10 @@
 
 	// ── playing ───────────────────────────────────────────────────────────────
 
-	let question = $state<Question | null>(null);
+	/** What a photograph shows, which is what the engine filters and reports. */
+	type Shows = { variants: PlumageVariant[]; flight: boolean };
+
+	let question = $state<Question<Shows> | null>(null);
 	let answered = $state<string | null>(null);
 	let notes = $state<NoteMap>({});
 
@@ -127,7 +143,8 @@
 		answered = null;
 		question = makeQuestion(
 			picks,
-			(code) => photosFor(code).map((p) => p.variant),
+			(code): Shows[] => photosFor(code).map((p) => ({ variants: p.variants, flight: p.flight })),
+			allows,
 			question?.target
 		);
 	}
@@ -137,58 +154,23 @@
 		answered = code;
 	}
 
-	// ── installable app ───────────────────────────────────────────────────────
-
-	let installPrompt = $state<{ prompt: () => void } | null>(null);
-
-	$effect(() => {
-		if (!('serviceWorker' in navigator)) return;
-		navigator.serviceWorker.register(asset('quiz-sw.js'), { scope: `${base}/` }).catch(() => {
-			/* No offline shell; the quiz needs the network for photographs anyway. */
-		});
-	});
-
-	$effect(() => {
-		const onPrompt = (e: Event) => {
-			e.preventDefault();
-			installPrompt = e as unknown as { prompt: () => void };
-		};
-		window.addEventListener('beforeinstallprompt', onPrompt);
-		return () => window.removeEventListener('beforeinstallprompt', onPrompt);
-	});
-
-	function install() {
-		installPrompt?.prompt();
-		installPrompt = null;
-	}
 </script>
 
 <svelte:head>
-	<title>Bird ID quiz</title>
+	<title>Photo quiz</title>
 	<meta name="description" content="Compare confusion species side by side." />
 	<meta name="robots" content="noindex" />
-	<link rel="manifest" href={asset('quiz.webmanifest')} />
-	<meta name="theme-color" content="#2f4a3c" />
-	<meta name="mobile-web-app-capable" content="yes" />
-	<meta name="apple-mobile-web-app-title" content="Bird Quiz" />
-	<link rel="apple-touch-icon" href={asset('quiz-icon-192.png')} />
 </svelte:head>
 
 <div class="wrap">
 	{#if screen === 'setup'}
 		<header class="intro">
-			<h1>Bird ID quiz</h1>
+			<h1>Photo quiz</h1>
 			<p>Pick two or more birds.</p>
 			{#if dev}
 				<p class="links"><a href="{base}/edit">Edit the notes and photographs</a></p>
 			{/if}
 		</header>
-
-		{#if installPrompt}
-			<button type="button" class="install" onclick={install}>
-				Install as an app
-			</button>
-		{/if}
 
 		<div class="picker">
 			<label for="species-search">Search by English, scientific or Spanish name</label>
@@ -236,25 +218,36 @@
 			<ul class="chosen">
 				{#each picks as pick (pick.code)}
 					{@const available = variantsFor(pick.code)}
+					{@const flyable = hasFlight(pick.code)}
 					<li>
 						<div class="head">
 							<strong>{name(pick.code)}</strong>
 							<button type="button" class="x" onclick={() => remove(pick.code)}>Remove</button>
 						</div>
-						{#if available.length > 1}
+						{#if available.length > 1 || flyable}
 							<div class="variants">
-								<button
-									type="button"
-									class:on={pick.variants.length === 0}
-									onclick={() => (picks = picks.map((p) => (p.code === pick.code ? { ...p, variants: [] } : p)))}
-								>All</button>
-								{#each VARIANT_ORDER.filter((v) => available.includes(v)) as variant (variant)}
+								{#if available.length > 1}
 									<button
 										type="button"
-										class:on={pick.variants.includes(variant)}
-										onclick={() => toggleVariant(pick.code, variant)}
-									>{variant}</button>
-								{/each}
+										class:on={pick.variants.length === 0}
+										onclick={() => (picks = picks.map((p) => (p.code === pick.code ? { ...p, variants: [] } : p)))}
+									>All</button>
+									{#each VARIANT_ORDER.filter((v) => available.includes(v)) as variant (variant)}
+										<button
+											type="button"
+											class:on={pick.variants.includes(variant)}
+											onclick={() => toggleVariant(pick.code, variant)}
+										>{variant}</button>
+									{/each}
+								{/if}
+								{#if flyable}
+									<button
+										type="button"
+										class="posture"
+										class:on={pick.flight}
+										onclick={() => toggleFlight(pick.code)}
+									>in flight</button>
+								{/if}
 							</div>
 						{/if}
 					</li>
@@ -331,8 +324,10 @@
 						{name(question.target)}, not {name(answered)}
 					{/if}
 				</strong>
-				{#if question.variant !== 'any'}
-					<span class="revealed">{question.variant}</span>
+				{#if photo && (photo.variants.length || photo.flight)}
+					<span class="revealed">
+						{[...photo.variants, ...(photo.flight ? ['in flight'] : [])].join(', ')}
+					</span>
 				{/if}
 
 				{#each shown as note (note.code)}
@@ -527,6 +522,13 @@
 		color: var(--stone);
 		cursor: pointer;
 	}
+	/* Flight narrows whatever plumage is selected rather than replacing it, so
+	   it is set apart from the pills it combines with. */
+	.variants button.posture {
+		margin-left: 0.5rem;
+		border-style: dashed;
+	}
+
 	.variants button.on {
 		background: var(--canopy);
 		border-color: var(--canopy);
@@ -618,23 +620,6 @@
 		font: inherit;
 		font-weight: 700;
 		cursor: pointer;
-	}
-
-	.install {
-		display: block;
-		width: 100%;
-		margin-top: 1.5rem;
-		padding: 0.7rem 1rem;
-		background: var(--mist);
-		border: 1px solid var(--rule);
-		border-radius: 0.35rem;
-		font: inherit;
-		font-size: 0.9rem;
-		color: var(--canopy);
-		cursor: pointer;
-	}
-	.install:hover {
-		border-color: var(--canopy);
 	}
 
 	/* ── runtime ──────────────────────────────────────────────────────────── */
