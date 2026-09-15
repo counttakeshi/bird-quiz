@@ -81,6 +81,13 @@ DEFAULT_VARIANTS = ["any", "male", "female", "juvenile"]
 #              entirely. "immature" suits groups that take years to
 #              mature and get tagged that way (raptors, gulls,
 #              herons). "juvenile" suits passerines.
+#
+#              A list asks for both. Which word Macaulay's uploaders
+#              reach for is their choice, not a fact about the bird,
+#              and for the vultures they clearly use both - so picking
+#              one on the bird's behalf loses whatever went under the
+#              other. plumage.py has always asked for both; this is
+#              the side that could not express it.
 # "flight"  -> you see this bird overhead rather than perched, so a
 #              flight photograph is the ordinary view and not a lucky
 #              one. Independent of sex and age: the flight search is
@@ -107,7 +114,7 @@ FAMILY_RULES: dict[str, dict[str, Any]] = {
     "Pelecanidae": {"female": False, "age": "immature"},
     "Sulidae": {"female": False, "age": "immature"},
     "Phalacrocoracidae": {"female": False, "age": "immature"},
-    "Cathartidae": {"female": False, "age": "immature", "flight": True},
+    "Cathartidae": {"female": False, "age": ["immature", "juvenile"], "flight": True},
     "Scolopacidae": {"female": False, "age": "juvenile"},
     "Charadriidae": {"female": False, "age": "juvenile"},
     "Jacanidae": {"female": False, "age": "juvenile"},
@@ -1121,14 +1128,15 @@ class MacaulayUrlHarvester:
             variants.extend(["male", "female"])
 
         age = rule.get("age")
+        ages = [age] if isinstance(age, str) else list(age or [])
 
-        if self.all_variants and not age:
-            age = "juvenile"
+        if self.all_variants and not ages:
+            ages = ["juvenile"]
 
-        if age:
+        if ages:
             if not sexes_differ:
                 variants.append("adult")
-            variants.append(age)
+            variants.extend(ages)
 
         if rule.get("flight"):
             variants.append("flight")
