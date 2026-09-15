@@ -29,3 +29,15 @@ vite.config.ts.timestamp-*
 # Quiz pipeline: large downloads and API responses, all regenerable.
 quiz/data/raw/
 quiz/pipeline/__pycache__/
+
+# Macaulay harvester working files: ~180 MB of scraped URLs, state and images,
+# all regenerable and none of it part of the quiz itself.
+/macaulay_images/
+/macaulay_diagnostics/
+/macaulay_image_urls.csv
+/macaulay_url_state.json
+/macaulay_url_state.json.tmp
+/macaulay_download_state.json
+/variant_rules_applied.csv
+/ebird_taxonomy.csv
+/Bird Taxon Codes Reference*.xlsx
