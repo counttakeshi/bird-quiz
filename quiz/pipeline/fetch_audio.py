@@ -93,28 +93,52 @@ def key() -> str:
     return value
 
 
-def search(query: str, api_key: str) -> list[dict]:
-    """One page of recordings. 100 is plenty: we keep at most eight."""
+def search(query: str, api_key: str, attempts: int = 5) -> list[dict]:
+    """One page of recordings. 100 is plenty: we keep at most eight.
+
+    Retries the failures that are about the network rather than the request.
+    A full run is a thousand species and the better part of an hour, and a
+    dropped connection partway through used to end it - which is exactly what
+    happened at species 806 of 1,073.
+    """
     url = API + "?" + urllib.parse.urlencode(
         {"query": query, "key": api_key, "per_page": 100}
     )
     request = urllib.request.Request(url, headers={"User-Agent": UA})
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            payload = json.loads(response.read().decode("utf-8", "replace"))
-    except urllib.error.HTTPError as err:
-        if err.code in (401, 403):
-            raise Unauthorized(f"HTTP {err.code} for {query}") from err
-        # 400 is a query the API would not parse - a species whose name has
-        # something in it the tag syntax dislikes. Report it and move on
-        # rather than losing the whole run to one bird.
-        if err.code == 400:
-            print(f"    ! rejected: {query}")
+
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                payload = json.loads(response.read().decode("utf-8", "replace"))
+            return payload.get("recordings") or []
+        except urllib.error.HTTPError as err:
+            if err.code in (401, 403):
+                raise Unauthorized(f"HTTP {err.code} for {query}") from err
+            # 400 is a query the API would not parse - a species whose name has
+            # something in it the tag syntax dislikes. Report it and move on
+            # rather than losing the whole run to one bird.
+            if err.code == 400:
+                print(f"    ! rejected: {query}")
+                return []
+            # 429 and the 5xx range are worth waiting out; nothing else is.
+            if err.code != 429 and err.code < 500:
+                raise
+            problem = f"HTTP {err.code}"
+        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as err:
+            problem = type(err).__name__
+        finally:
+            time.sleep(REQUEST_DELAY)
+
+        if attempt == attempts - 1:
+            print(f"    ! giving up on {query} after {attempts} attempts ({problem})")
             return []
-        raise
-    finally:
-        time.sleep(REQUEST_DELAY)
-    return payload.get("recordings") or []
+        # Back off, because whatever is wrong is not going to be fixed by
+        # asking again immediately.
+        wait = 2 ** attempt
+        print(f"    . {problem}, retrying in {wait}s")
+        time.sleep(wait)
+
+    return []
 
 
 def taxon_query(scientific: str) -> str:
