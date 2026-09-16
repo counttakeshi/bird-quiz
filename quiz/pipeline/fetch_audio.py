@@ -71,6 +71,12 @@ SOUND_TYPES = ["song", "call", "other"]
 
 REQUEST_DELAY = 0.6
 
+# Written every CHECKPOINT species, and atomically: the run has already been
+# killed twice partway through - once by a dropped connection, once by the OS
+# reclaiming memory - and a kill landing inside a plain write would leave a
+# truncated cache where an hour of harvesting used to be.
+CHECKPOINT = 10
+
 RAW = common.DATA / "raw" / "audio_xc.json"
 OUT = common.ROOT / "src" / "lib" / "data" / "quiz" / "audio.json"
 INDEX = common.ROOT / "src" / "lib" / "data" / "quiz" / "index.json"
@@ -198,14 +204,39 @@ def usable(recording: dict) -> bool:
     return 2 <= length <= 180
 
 
-def harvest(codes: dict[str, str], cache: dict, api_key: str, limit: int | None) -> dict:
-    """Walk the tiers for every species that does not already have enough."""
+def save(cache: dict) -> None:
+    """Write the cache so that being killed cannot corrupt it.
+
+    A rename within a directory is atomic, so the real file is either the old
+    complete one or the new complete one, never half of either.
+    """
+    RAW.parent.mkdir(parents=True, exist_ok=True)
+    temporary = RAW.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(cache), encoding="utf-8")
+    os.replace(temporary, RAW)
+
+
+def harvest(
+    codes: dict[str, str],
+    cache: dict,
+    api_key: str,
+    limit: int | None,
+    again: bool = False,
+) -> dict:
+    """Walk the tiers for every species not already asked for.
+
+    An entry records `w`, how many recordings were asked for, alongside the
+    recordings themselves. Without it a species that xeno-canto simply does
+    not have eight of - and 30 of them have none at all - looks unfinished
+    forever, so every resumed run re-walked the thin ones from the top and
+    never reached the end of the list.
+    """
     done = skipped = 0
     for code, scientific in codes.items():
         if limit is not None and done >= limit:
             break
         held = cache.get(code)
-        if held is not None and len(held.get("r", [])) >= WANT:
+        if not again and held is not None and held.get("w", 0) >= WANT:
             skipped += 1
             continue
 
@@ -236,15 +267,14 @@ def harvest(codes: dict[str, str], cache: dict, api_key: str, limit: int | None)
                 if len(kept) >= WANT:
                     break
 
-        cache[code] = {"r": kept}
+        cache[code] = {"r": kept, "w": WANT}
         done += 1
         tiers = sorted({r["_tier"] for r in kept})
         state = f"{len(kept):2} recordings [{', '.join(tiers) or 'none'}]"
         print(f"  {code:<10} {scientific:<30} {state}")
 
-        if done % 25 == 0:
-            RAW.parent.mkdir(parents=True, exist_ok=True)
-            RAW.write_text(json.dumps(cache), encoding="utf-8")
+        if done % CHECKPOINT == 0:
+            save(cache)
 
     print(f"\n{done} species fetched, {skipped} already had enough")
     return cache
@@ -331,6 +361,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, help="fetch at most this many species")
     parser.add_argument(
+        "--again",
+        action="store_true",
+        help="re-walk species already asked for, rather than only the rest",
+    )
+    parser.add_argument(
         "--pack-only",
         action="store_true",
         help="rebuild audio.json from the cache without calling the API",
@@ -345,14 +380,13 @@ def main() -> int:
 
     if not args.pack_only:
         try:
-            cache = harvest(codes, cache, key(), args.limit)
+            cache = harvest(codes, cache, key(), args.limit, args.again)
         except Unauthorized as err:
             print(f"\nxeno-canto rejected the key: {err}")
             print("Check XC_API_KEY. Nothing was lost - the cache is written as it goes.")
             return 1
         finally:
-            RAW.parent.mkdir(parents=True, exist_ok=True)
-            RAW.write_text(json.dumps(cache), encoding="utf-8")
+            save(cache)
 
     packed = pack(cache)
     OUT.write_text(json.dumps(packed, separators=(",", ":")), encoding="utf-8")
