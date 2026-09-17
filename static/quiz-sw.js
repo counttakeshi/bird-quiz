@@ -7,7 +7,11 @@
    ask a question. What the cache buys is that the app opens instantly and
    survives a flaky connection, rather than showing a browser error page. */
 
-const CACHE = 'quiz-v1';
+/* Rewritten by scripts/postbuild.mjs with a hash of what the build produced.
+   It used to be a fixed string, so the activate handler below - which deletes
+   every quiz cache that is not the current one - never matched anything, and
+   the cache accumulated every build's assets forever. */
+const CACHE = 'quiz-BUILD_ID';
 
 /* Everything this worker controls sits under its registration scope, which
    already carries the base path (empty on a domain root, /bird-quiz on the
@@ -63,16 +67,31 @@ self.addEventListener('fetch', (e) => {
 	const isAppAsset = url.pathname.includes('/_app/');
 	if (!inScope && !isAppAsset) return;
 
-	/* Serve from cache immediately, refresh in the background. */
 	e.respondWith(
 		caches.open(CACHE).then(async (cache) => {
+			const save = (res) => {
+				if (res && res.ok) cache.put(req, res.clone());
+				return res;
+			};
+
+			/* The page itself goes to the network first. Everything under
+			   /_app/ carries a content hash, so a cached copy of one of those
+			   is right forever - but the page is what names them, and serving
+			   it from cache handed back the whole of the previous build. That
+			   is how a quiz kept showing yesterday's photographs after a
+			   deploy, with no way to tell from the inside. */
+			if (req.mode === 'navigate') {
+				const fresh = await fetch(req).then(save).catch(() => null);
+				return (
+					fresh ||
+					(await cache.match(req, { ignoreSearch: true })) ||
+					cache.match(SCOPE)
+				);
+			}
+
+			/* Hashed assets: straight from the cache, refreshed behind you. */
 			const hit = await cache.match(req, { ignoreSearch: true });
-			const net = fetch(req)
-				.then((res) => {
-					if (res && res.ok) cache.put(req, res.clone());
-					return res;
-				})
-				.catch(() => null);
+			const net = fetch(req).then(save).catch(() => null);
 			return hit || (await net) || cache.match(SCOPE);
 		})
 	);

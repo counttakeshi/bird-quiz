@@ -14,8 +14,11 @@
  *   4. Drop /edit from the published build. It saves through Vite middleware
  *      that only exists under `npm run dev`, so on a published site its save
  *      button can only ever fall back to downloading a file.
+ *   5. Stamp the build into the service worker's cache name, so a deploy
+ *      actually replaces what the last one cached.
  */
-import { writeFileSync, rmSync, existsSync } from 'node:fs';
+import { writeFileSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -84,3 +87,31 @@ for (const path of ['edit.html', join('edit', 'index.html')]) {
 }
 rmSync(join(BUILD, 'edit'), { recursive: true, force: true });
 console.log(`postbuild: dropped the editor from the build (${dropped} file${dropped === 1 ? '' : 's'})`);
+
+// ── 5. version the service worker's cache ───────────────────────────────────
+// Named for what the build produced. Every file under _app/ carries a content
+// hash, so the list of them changes when and only when the build does - which
+// makes a rebuild of unchanged source keep its cache, and a real change throw
+// the old one away. Without this the name was fixed, the activate handler's
+// cleanup never matched, and a browser kept serving the previous build.
+function hashOf(dir) {
+	const names = [];
+	const walk = (at, prefix) => {
+		for (const entry of readdirSync(at, { withFileTypes: true }).sort((a, b) =>
+			a.name.localeCompare(b.name)
+		)) {
+			const full = join(at, entry.name);
+			if (entry.isDirectory()) walk(full, `${prefix}/${entry.name}`);
+			else names.push(`${prefix}/${entry.name}`);
+		}
+	};
+	walk(dir, '');
+	return createHash('sha256').update(names.join('|')).digest('hex').slice(0, 12);
+}
+
+const worker = join(BUILD, 'quiz-sw.js');
+if (existsSync(worker)) {
+	const id = hashOf(join(BUILD, '_app'));
+	writeFileSync(worker, readFileSync(worker, 'utf-8').replaceAll('BUILD_ID', id));
+	console.log(`postbuild: service worker cache is quiz-${id}`);
+}
