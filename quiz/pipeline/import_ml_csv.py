@@ -173,15 +173,24 @@ def main() -> int:
             carried = plumage.tags_of(found)
             if carried:
                 asset_tags.setdefault((code, int(asset)), set()).update(carried)
-            # Which bank the row counts in, for the per-variant caps. The age
-            # is what decides it: `flight` alone is unfiltered for age and so
-            # belongs with the unfiltered search, while `flight-immature` is
-            # an immature bird and belongs with the immatures. The tags above
-            # carry everything either way.
+            # Which bank the row counts in, for the per-variant caps. Every
+            # search gets its own allowance, because they are different
+            # questions: putting `flight-immature` in with `immature` made the
+            # fifty perched immatures crowd out the fifteen airborne ones, and
+            # a bank of seven is what the filter was for.
+            #
+            # Plain `flight` is the exception. It is unfiltered for age, same
+            # as the unfiltered search, so it shares that bank rather than
+            # being capped as though it were a narrow slice.
             plumages = carried - {plumage.FLIGHT}
-            variant = next(
-                (v for v in plumage.VARIANTS if v in plumages), "any"
-            )
+            if carried == {plumage.FLIGHT} or not carried:
+                variant = "any"
+            elif plumage.FLIGHT in carried:
+                variant = found
+            else:
+                variant = next(
+                    (v for v in plumage.VARIANTS if v in plumages), "any"
+                )
             photo = {
                 "a": int(asset),
                 "by": (row.get("photographer") or "").strip(),
@@ -216,21 +225,29 @@ def main() -> int:
     # it twice as likely to be drawn, and labels it "immature" one time and
     # "any" the next. Keep the most specific tag for each asset and drop the
     # rest: a named variant tells us something, "any" tells us nothing.
+    def specificity(variant: str) -> int:
+        """How narrow a search is, lowest first.
+
+        A crossed search like `flight-immature` asked for two things at once
+        and so beats either on its own; `any` asked for nothing and loses to
+        everything. Within the plain plumages the VARIANTS order is arbitrary
+        but stable, which is all that matters - it only has to settle
+        contradictory tagging the same way on every rerun.
+        """
+        if variant == "any":
+            return 99
+        if "-" in variant:
+            return 0
+        return 1 + plumage.VARIANTS.index(variant)
+
     best_variant: dict[tuple[str, int], str] = {}
     for (code, variant), rows in by_species.items():
         for row in rows:
             key = (code, row["a"])
             # `held` would shadow the held() helper defined below.
             current = best_variant.get(key)
-            if current is None:
+            if current is None or specificity(variant) < specificity(current):
                 best_variant[key] = variant
-            elif current == "any" and variant != "any":
-                best_variant[key] = variant
-            elif current != "any" and variant != "any":
-                # Contradictory tagging, e.g. male and juvenile on one asset.
-                # VARIANTS order is arbitrary but stable, so reruns agree.
-                if plumage.VARIANTS.index(variant) < plumage.VARIANTS.index(current):
-                    best_variant[key] = variant
 
     deduped = 0
     for (code, variant), rows in list(by_species.items()):
