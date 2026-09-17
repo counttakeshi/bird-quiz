@@ -81,7 +81,7 @@ def country_of(location: str) -> str:
     return str(value.get("countryCode") or "") if isinstance(value, dict) else ""
 
 
-def sample_across_bands(rows: list[dict], want: int) -> list[dict]:
+def sample_across_bands(rows: list[dict], want: int, seed: str = "") -> list[dict]:
     """Take `want` photographs spread over the rating bands, not off the top."""
     if len(rows) <= want:
         return rows
@@ -96,8 +96,14 @@ def sample_across_bands(rows: list[dict], want: int) -> list[dict]:
     picked: list[dict] = []
     # Round-robin one from each non-empty band until full, so a thin band is
     # exhausted rather than allowed to cap the total.
+    #
+    # Seeded per species, so re-importing the same CSV picks the same
+    # photographs. Unseeded it reshuffled the whole bank on every run and
+    # committed a 1.8 MB diff that meant nothing - which also buried whatever
+    # the harvest had genuinely added.
+    shuffler = random.Random(seed)
     for bucket in buckets:
-        random.shuffle(bucket)
+        shuffler.shuffle(bucket)
     while len(picked) < want and any(buckets):
         for bucket in buckets:
             if not bucket or len(picked) >= want:
@@ -164,12 +170,18 @@ def main() -> int:
             # Older harvests have no variant column at all; those rows are
             # the unfiltered search, which is what "any" means.
             found = (row.get("variant") or "any").strip().lower()
-            if found in plumage.TAG_BIT:
-                asset_tags.setdefault((code, int(asset)), set()).add(found)
-            # Flight is not a plumage. Its search is unfiltered for age and sex,
-            # so those rows belong in the unfiltered bank; the tag above is
-            # what carries the fact that the bird was airborne.
-            variant = found if found in plumage.VARIANTS else "any"
+            carried = plumage.tags_of(found)
+            if carried:
+                asset_tags.setdefault((code, int(asset)), set()).update(carried)
+            # Which bank the row counts in, for the per-variant caps. The age
+            # is what decides it: `flight` alone is unfiltered for age and so
+            # belongs with the unfiltered search, while `flight-immature` is
+            # an immature bird and belongs with the immatures. The tags above
+            # carry everything either way.
+            plumages = carried - {plumage.FLIGHT}
+            variant = next(
+                (v for v in plumage.VARIANTS if v in plumages), "any"
+            )
             photo = {
                 "a": int(asset),
                 "by": (row.get("photographer") or "").strip(),
@@ -252,7 +264,7 @@ def main() -> int:
         chosen = (
             sorted(unique.values(), key=lambda r: -r["r"])[:want]
             if args.top
-            else sample_across_bands(list(unique.values()), want)
+            else sample_across_bands(list(unique.values()), want, f"{code}|{variant}")
         )
         chosen.sort(key=lambda r: -r["r"])
         pooled.setdefault(code, []).extend(chosen)

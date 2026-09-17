@@ -63,11 +63,26 @@ VARIANT_FILTERS = {
     "adult": {"age": "adult"},
     "juvenile": {"age": "juvenile"},
     "immature": {"age": "immature"},
-    # Macaulay's "Flying" behaviour. Deliberately unfiltered for age and sex:
-    # a bird overhead is the one case where you usually cannot tell either, so
-    # narrowing it would throw away most of the useful photographs.
+    # Macaulay's "Flying" behaviour. The unfiltered search first, because it
+    # is where most flight photographs live - a bird overhead is the case
+    # where an uploader least often knows the age.
     "flight": {"tag": "flying_flight"},
+    # ...then the same behaviour crossed with each age. Two independent
+    # searches overlapping is not a substitute for asking: the unfiltered
+    # flight search and the immature search agreed on 46 photographs in the
+    # whole bank, which is nothing. Asking directly is the only way a flight
+    # deck can be age-filtered at all.
+    "flight-adult": {"tag": "flying_flight", "age": "adult"},
+    "flight-immature": {"tag": "flying_flight", "age": "immature"},
+    "flight-juvenile": {"tag": "flying_flight", "age": "juvenile"},
 }
+
+# Which words Macaulay's uploaders reach for is their choice, not a fact about
+# the bird, so a family that cares about age asks for both rather than betting
+# on one. plumage.py has always asked for both.
+AGES = ["immature", "juvenile"]
+
+FLIGHT_VARIANTS = ["flight", "flight-adult", "flight-immature", "flight-juvenile"]
 
 DEFAULT_VARIANTS = ["any", "male", "female", "juvenile"]
 
@@ -1128,10 +1143,12 @@ class MacaulayUrlHarvester:
             variants.extend(["male", "female"])
 
         age = rule.get("age")
-        ages = [age] if isinstance(age, str) else list(age or [])
+        # An explicit list is honoured; any other truthy value means "this
+        # family cares about age", and both words get asked for.
+        ages = list(age) if isinstance(age, list) else (list(AGES) if age else [])
 
         if self.all_variants and not ages:
-            ages = ["juvenile"]
+            ages = list(AGES)
 
         if ages:
             if not sexes_differ:
@@ -1139,7 +1156,7 @@ class MacaulayUrlHarvester:
             variants.extend(ages)
 
         if rule.get("flight"):
-            variants.append("flight")
+            variants.extend(FLIGHT_VARIANTS if ages else ["flight"])
 
         # A run that only wants the new tier should not re-walk the ones
         # already in the state file. Filtering here rather than at the call

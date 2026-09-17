@@ -39,6 +39,17 @@ TAGS = ["male", "female", "juvenile", "immature", "adult", FLIGHT]
 TAG_BIT = {name: 7 + i for i, name in enumerate(TAGS)}
 
 
+def tags_of(search: str) -> set[str]:
+    """What a Macaulay search name says about the photographs it returned.
+
+    A search is named for the filters it carried, so `flight-immature` is the
+    flight behaviour and the immature age at once. Splitting on the hyphen
+    keeps the harvester free to add combinations without this having to learn
+    each one.
+    """
+    return {part for part in (search or "").split("-") if part in TAG_BIT}
+
+
 class Plumage:
     """Per-species sex, age and flight flags, resolved from family defaults."""
 
