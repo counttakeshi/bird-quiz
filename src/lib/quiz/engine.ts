@@ -47,6 +47,13 @@ export interface Pick<Tag extends string = PlumageVariant> {
 	flight?: boolean;
 }
 
+export type NameLang = 'en' | 'es';
+
+/** The common name in the chosen language. Three species have no Spanish name and keep the English one. */
+export function commonName(entry: SpeciesEntry, lang: NameLang = 'en'): string {
+	return lang === 'es' ? (entry.e ?? entry.n) : entry.n;
+}
+
 // ── search ──────────────────────────────────────────────────────────────────
 
 function fold(s: string): string {
@@ -60,28 +67,34 @@ function fold(s: string): string {
 export interface Ranked {
 	entry: SpeciesEntry;
 	/** Which field matched, so the dropdown can show why a row is there. */
-	via: 'common' | 'scientific' | 'spanish';
+	via: 'english' | 'scientific' | 'spanish';
 }
 
 /**
  * Rank species against a query across all three name systems.
  *
  * Prefix matches beat interior ones, and matching the start of any word beats
- * matching mid-word, so "wood" surfaces Wood-Pewee ahead of a genus.
+ * matching mid-word, so "wood" surfaces Wood-Pewee ahead of a genus. The
+ * language names are shown in wins ties.
  */
-export function search(index: SpeciesEntry[], query: string, limit = 8): Ranked[] {
+export function search(
+	index: SpeciesEntry[],
+	query: string,
+	limit = 8,
+	names: NameLang = 'en'
+): Ranked[] {
 	const q = fold(query.trim());
 	if (!q) return [];
 
 	const scored: { r: Ranked; score: number }[] = [];
 	for (const entry of index) {
 		let best = Infinity;
-		let via: Ranked['via'] = 'common';
+		let via: Ranked['via'] = 'english';
 
 		const fields: [string | undefined, Ranked['via'], number][] = [
-			[entry.n, 'common', 0],
+			[entry.n, 'english', names === 'en' ? 0 : 1],
 			[entry.s, 'scientific', 1],
-			[entry.e, 'spanish', 1]
+			[entry.e, 'spanish', names === 'es' ? 0 : 1]
 		];
 
 		for (const [raw, kind, penalty] of fields) {
@@ -101,8 +114,22 @@ export function search(index: SpeciesEntry[], query: string, limit = 8): Ranked[
 		if (best < Infinity) scored.push({ r: { entry, via }, score: best });
 	}
 
-	scored.sort((a, b) => a.score - b.score || a.r.entry.n.localeCompare(b.r.entry.n));
+	scored.sort(
+		(a, b) =>
+			a.score - b.score ||
+			commonName(a.r.entry, names).localeCompare(commonName(b.r.entry, names))
+	);
 	return scored.slice(0, limit).map((s) => s.r);
+}
+
+/**
+ * The name a search row matched on, when it is not the name already shown, so
+ * typing "Acadian" with Spanish names on still says why Papamoscas Verdoso
+ * came up. Null means show the scientific name instead.
+ */
+export function matchedName(r: Ranked, names: NameLang): string | null {
+	const hit = r.via === 'english' ? r.entry.n : r.via === 'spanish' ? r.entry.e : undefined;
+	return hit && hit !== commonName(r.entry, names) ? hit : null;
 }
 
 // ── suggestions ─────────────────────────────────────────────────────────────
@@ -124,7 +151,8 @@ export interface Suggestion {
 export function suggestions(
 	index: SpeciesEntry[],
 	chosen: string[],
-	limit = 12
+	limit = 12,
+	names: NameLang = 'en'
 ): Suggestion[] {
 	if (!chosen.length) return [];
 	const taken = new Set(chosen);
@@ -142,7 +170,7 @@ export function suggestions(
 	out.sort((a, b) => {
 		const ga = genera.has(a.entry.g) ? 0 : 1;
 		const gb = genera.has(b.entry.g) ? 0 : 1;
-		return ga - gb || a.entry.n.localeCompare(b.entry.n);
+		return ga - gb || commonName(a.entry, names).localeCompare(commonName(b.entry, names));
 	});
 	return out.slice(0, limit);
 }

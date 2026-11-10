@@ -4,6 +4,8 @@
 		search,
 		suggestions,
 		makeQuestion,
+		commonName,
+		matchedName,
 		type SpeciesEntry,
 		type Pick,
 		type Question
@@ -11,6 +13,7 @@
 	import { photosFor, hasPhotos, variantsFor, hasFlight } from '$lib/quiz/photos';
 	import { VARIANT_ORDER, satisfiesVariant, type PlumageVariant } from '$lib/quiz/pins';
 	import { loadNotes, noteFor, type NoteMap } from '$lib/quiz/notes';
+	import { nameLang, text } from '$lib/i18n.svelte';
 	import { base } from '$app/paths';
 	import { dev } from '$app/environment';
 
@@ -18,10 +21,14 @@
 	const byCode = new Map(index.map((e) => [e.c, e]));
 	const withPhotos = index.filter((e) => hasPhotos(e.c));
 
+	const s = $derived(text());
+	const names = $derived(nameLang());
+
 	let screen = $state<'setup' | 'quiz'>('setup');
 
 	function name(code: string): string {
-		return byCode.get(code)?.n ?? code;
+		const entry = byCode.get(code);
+		return entry ? commonName(entry, names) : code;
 	}
 
 	// ── choosing species ──────────────────────────────────────────────────────
@@ -31,10 +38,10 @@
 	let picks = $state<Pick[]>([]);
 	let inputEl = $state<HTMLInputElement | null>(null);
 
-	const matches = $derived(query.trim() ? search(withPhotos, query) : []);
+	const matches = $derived(query.trim() ? search(withPhotos, query, 8, names) : []);
 	const open = $derived(matches.length > 0);
 	const chosen = $derived(picks.map((p) => p.code));
-	const suggested = $derived(suggestions(withPhotos, chosen));
+	const suggested = $derived(suggestions(withPhotos, chosen, 12, names));
 	const ready = $derived(picks.length >= 2);
 
 	function add(code: string) {
@@ -157,20 +164,20 @@
 </script>
 
 <svelte:head>
-	<title>Photo quiz</title>
-	<meta name="description" content="Compare confusion species side by side." />
+	<title>{s.photoQuiz}</title>
+	<meta name="description" content={s.description} />
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="wrap">
 	{#if screen === 'setup'}
 		<header class="intro">
-			<h1>Photo quiz</h1>
-			<p>Pick two or more birds.</p>
+			<h1>{s.photoQuiz}</h1>
+			<p>{s.pickBirds}</p>
 		</header>
 
 		<div class="picker">
-			<label for="species-search">Search</label>
+			<label for="species-search">{s.search}</label>
 			<div class="combo">
 				<input
 					id="species-search"
@@ -183,11 +190,12 @@
 					aria-expanded={open}
 					aria-controls="species-listbox"
 					aria-autocomplete="list"
-					placeholder="Acadian Flycatcher, Contopus, Papamoscas…"
+					placeholder={s.placeholder}
 				/>
 				{#if open}
 					<ul id="species-listbox" role="listbox">
 						{#each matches as match, i (match.entry.c)}
+							{@const also = matchedName(match, names)}
 							<li role="option" aria-selected={i === highlighted}>
 								<button
 									type="button"
@@ -195,10 +203,10 @@
 									onmouseenter={() => (highlighted = i)}
 									onclick={() => add(match.entry.c)}
 								>
-									<span class="opt-name">{match.entry.n}</span>
+									<span class="opt-name">{commonName(match.entry, names)}</span>
 									<span class="opt-meta">
-										{#if match.via === 'spanish' && match.entry.e}
-											{match.entry.e}
+										{#if also}
+											{also}
 										{:else}
 											<i>{match.entry.s}</i>
 										{/if}
@@ -219,7 +227,7 @@
 					<li>
 						<div class="head">
 							<strong>{name(pick.code)}</strong>
-							<button type="button" class="x" onclick={() => remove(pick.code)}>Remove</button>
+							<button type="button" class="x" onclick={() => remove(pick.code)}>{s.remove}</button>
 						</div>
 						{#if available.length > 1 || flyable}
 							<div class="variants">
@@ -228,13 +236,13 @@
 										type="button"
 										class:on={pick.variants.length === 0}
 										onclick={() => (picks = picks.map((p) => (p.code === pick.code ? { ...p, variants: [] } : p)))}
-									>All</button>
+									>{s.all}</button>
 									{#each VARIANT_ORDER.filter((v) => available.includes(v)) as variant (variant)}
 										<button
 											type="button"
 											class:on={pick.variants.includes(variant)}
 											onclick={() => toggleVariant(pick.code, variant)}
-										>{variant}</button>
+										>{s.variants[variant]}</button>
 									{/each}
 								{/if}
 								{#if flyable}
@@ -243,7 +251,7 @@
 										class="posture"
 										class:on={pick.flight}
 										onclick={() => toggleFlight(pick.code)}
-									>in flight</button>
+									>{s.inFlight}</button>
 								{/if}
 							</div>
 						{/if}
@@ -254,13 +262,13 @@
 
 		{#if suggested.length}
 			<div class="suggest">
-				<h2>Often confused with these</h2>
+				<h2>{s.oftenConfused}</h2>
 				<ul>
-					{#each suggested as s (s.entry.c)}
+					{#each suggested as sug (sug.entry.c)}
 						<li>
-							<button type="button" onclick={() => add(s.entry.c)}>
-								<span>{s.entry.n}</span>
-								<span class="why">{s.why}</span>
+							<button type="button" onclick={() => add(sug.entry.c)}>
+								<span>{commonName(sug.entry, names)}</span>
+								<span class="why">{sug.why}</span>
 							</button>
 						</li>
 					{/each}
@@ -269,16 +277,16 @@
 		{/if}
 
 		<button class="go" type="button" disabled={!ready} onclick={start}>
-			{ready ? `Compare these ${picks.length}` : 'Pick at least two'}
+			{ready ? s.compare(picks.length) : s.pickTwo}
 		</button>
 	{:else if question}
 		<div class="hud">
-			<button type="button" class="quit" onclick={() => (screen = 'setup')}>Change</button>
+			<button type="button" class="quit" onclick={() => (screen = 'setup')}>{s.change}</button>
 		</div>
 
 		<figure class="plate">
 			{#if photo}
-				<img src={photo.src} alt="Unidentified bird" />
+				<img src={photo.src} alt={s.unidentified} />
 				<figcaption>
 					<span>
 						{photo.credit}
@@ -317,18 +325,18 @@
 					{#if answered === question.target}
 						{name(question.target)}
 					{:else}
-						{name(question.target)}, not {name(answered)}
+						{s.notThis(name(question.target), name(answered))}
 					{/if}
 				</strong>
 				{#if photo && (photo.variants.length || photo.flight)}
 					<span class="revealed">
-						{[...photo.variants, ...(photo.flight ? ['in flight'] : [])].join(', ')}
+						{[...photo.variants.map((v) => s.variants[v]), ...(photo.flight ? [s.inFlight] : [])].join(', ')}
 					</span>
 				{/if}
 
 				{#each shown as note (note.code)}
 					<div class="note">
-						<h3>vs {name(note.code)}</h3>
+						<h3>{s.versus} {name(note.code)}</h3>
 						<dl>
 							{#each rows(note.text) as row (row.label + row.body)}
 								{#if row.label}
@@ -344,16 +352,16 @@
 
 				{#if !shown.length}
 					<p class="measured">
-						No notes yet.{#if dev} <a href="{base}/edit">Write them →</a>{/if}
+						{s.noNotes}{#if dev} <a href="{base}/edit">{s.writeThem}</a>{/if}
 					</p>
 				{/if}
 
-				<button type="button" class="go" onclick={next}>Next bird</button>
+				<button type="button" class="go" onclick={next}>{s.nextBird}</button>
 			</div>
 		{/if}
 	{:else}
-		<p class="empty">No photographs for those species yet.</p>
-		<button type="button" class="go" onclick={() => (screen = 'setup')}>Back</button>
+		<p class="empty">{s.noPhotos}</p>
+		<button type="button" class="go" onclick={() => (screen = 'setup')}>{s.back}</button>
 	{/if}
 </div>
 

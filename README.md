@@ -14,6 +14,8 @@ code with that site now.
 - `src/routes/+page.svelte` - the quiz itself.
 - `src/routes/edit/+page.svelte` - the editor for the notes and photo pins.
   Development only; see below.
+- `src/lib/i18n.svelte.ts` - every English and Spanish string, and the two
+  language settings (interface, bird names).
 - `src/lib/quiz/` - `engine.ts` (species search), `photos.ts` (which photograph
   answers a question), `pins.ts` (plumage variants), `notes.ts` (pair notes).
 - `src/lib/data/quiz/` - the data, all four files hand-maintained or generated

@@ -1,28 +1,31 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { dev } from '$app/environment';
+	import { text } from '$lib/i18n.svelte';
 
 	// Nothing heavy is imported here on purpose. The two quizzes carry a
 	// megabyte of harvested data between them, and SvelteKit splits per route,
 	// so this page loads neither until you pick one.
+
+	const s = $derived(text());
 </script>
 
 <svelte:head>
-	<title>Bird ID quiz</title>
-	<meta name="description" content="Compare confusion species side by side." />
+	<title>{s.title}</title>
+	<meta name="description" content={s.description} />
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="wrap">
-	<h1>Bird ID quiz</h1>
+	<h1>{s.title}</h1>
 
 	<nav>
-		<a href="{base}/photo">Photo quiz</a>
-		<a href="{base}/audio">Audio quiz</a>
+		<a href="{base}/photo">{s.photoQuiz}</a>
+		<a href="{base}/audio">{s.audioQuiz}</a>
 	</nav>
 
 	{#if dev}
-		<p class="links"><a href="{base}/edit">Edit the notes and photographs</a></p>
+		<p class="links"><a href="{base}/edit">{s.editLink}</a></p>
 	{/if}
 </div>
 
